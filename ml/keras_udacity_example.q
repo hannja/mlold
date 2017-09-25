@@ -52,7 +52,7 @@ model.compile[`loss pp`categorical_crossentropy;
 model.summary[];
 
 -1"\n\ntraining for 10 epochs. To change number of epochs run\n\t",
- "model.fit[nparray training.features;nparray training.labels;`epochs pp 50;`batch_size pp 512]\n\n\tresults are in result, expected (normalized) gre and gpa for each student in test set\n\n";
+ "model.fit[nparray training.features;nparray training.labels;`epochs pp 50;`batch_size pp 512]\n\tmodel.predict nparray testing.features\n\n\tresults are expected (normalized) gre and gpa for each student in test set\n\n";
 model.fit[nparray training.features;nparray training.labels;`epochs pp 10;`batch_size pp 1000]; 
 
 / predict the labels for the test set
