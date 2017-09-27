@@ -59,7 +59,7 @@ q2pargs:{
 / callable q function from python function (python functino is foreign)
 callable:{if[not 112=type x;'`type];ce .P.GET,.[.P.CALL x],`.py.q2pargs}
 / same as callable but result as python object (foreign in q)
-pycallable:{if[not 112=type x;'`type];ce .[.P.CALL x],`.py.q2pargs} /q2pargs}
+pycallable:{if[not 112=type x;'`type];ce .[.P.CALL x],`.py.q2pargs} 
 / example for q functions, don't bother using
 qcallable:{ce .[x],`.py.q2pargs}
 
@@ -72,12 +72,12 @@ qcallable:{ce .[x],`.py.q2pargs}
 / to convert the object to q, imp_pycallable returns the foreign object as is
 imp:.P.IMP / the basic one
 imp_from_i:{$[0<type y;.z.s each y;atr[$[112=type x;x;imp x]]y]} / internal, returns the thing imported, x can be name or foreign, y should be symbol
-imp_from:{y set imp_from_i[x;y]}                                 / from x import y
-imp_from_as:{z set imp_from_i[x;y]}                              / from x import y as z
+imp_from:{imp_from_as[x;y;y]}                                    / from x import y
+imp_from_as:{z set'imp_from_i[x]'[y]}                            / from x import y as z
 imp_callable_from:{imp_callable_from_as[x;y;y]}                  / from x import y and make y callable returning a q object (careful if the return can't be converted)
 imp_pycallable_from:{imp_pycallable_from_as[x;y;y]}              / from x import y and make y callable returning foreign 
-imp_callable_from_as:{z set callable_from[x;y]}                  / from x import y as z and make z callable returning q
-imp_pycallable_from_as:{z set pycallable_from[x;y]}              / from x import y as z and make z callable returning foreign
+imp_callable_from_as:{z set'callable_from[x]'[y]}                / from x import y as z and make z callable returning q
+imp_pycallable_from_as:{z set'pycallable_from[x]'[y]}            / from x import y as z and make z callable returning foreign
 
 callable_from:{callable imp_from_i[x;y]}                         / gives a callable function which returns q data
 pycallable_from:{pycallable imp_from_i[x;y]}                     / gives a callable function which returns foreign
@@ -187,11 +187,94 @@ help:{
 /comment if you want your top level namespace left in peace (this puts help and print in top level)
 @[`.;`help;:;help];
 @[`.;`print;:;pyprint];
+
+/ python function creation and wrapping
+/ from a function foo:{[a;b;c;d]}
+/ we can define a something callable in python with exactly 4 arguments with
+/ .P.SET[`pyfoo]foo
+/ however if less arguments are passed, this call gives back a projection (wrapped in python)
+/ and if more seg faults (though should throw rank probably)
+/ so we'd like to get a different function in python with named parameters
+/ which will call the python callable object with exactly the correct parameters 
+/  we'd also like this new function to have keyword args so the eventual python caller can use this
+/  and ability to set defaults
+/ Approach
+/ from a q function, create a python lambda (via string building for now) which calls the q function with it's args
+/  this first function has no optional arguments and arguments are all positional
+/ using functools.partial wrap this function specifying the defaults we want 
+/ no projections or compositions for now, although this should be done TODO
+
+/qf2pl:{pl:get[x]1;.P.EVAL "lambda ",(csv sv u,\:"=None"),",f=None:f(",(csv sv u:string pl),")"} 
+/ build python function callable with keyword args 
+/pyfunc:{[x;dd].P.CALL[partial;enlist qf2pl;(`f,key dd)!enlist[x],value dd]}
+
+
+/ TODO param validation
+/partial:{[f;args;kwargs].P.CALL[imp_from_i[`functools]`partial][f](args;kwargs)}
+/qpartial:{[f;args;kwargs]partial[f](args;kwargs)}
+/ create a function callable in python with args applied from q (but overrideable in python)
+/ TODO x is foreign args is list of positional argument  names, 
+/deffunc:{[x]}
  
+/TODO these should really be in a python module I think, needed to wrap q projections for callbacks and generators
+/ note that you need the modified version of py.c with the change for projections for this to work
+/# callable class wrappers for q projections and 'closures' (see below) 
+P)class qclosure(object):
+ def __init__(self,qfunc=None):
+  self.qlist=qfunc
+ def __call__(self,*args):
+  res=self.qlist[0](*self.qlist[1:]+args)
+  self.qlist=res[0] #update the projection
+  return res[-1]
+ def __getitem__(self,ind):
+  return self.qlist[ind]
+ def __setitem__(self,ind):
+  pass
+ def __delitem__(self,ind):
+  pass
+
+P)class qprojection(object):
+ def __init__(self,qfunc=None):
+  self.qlist=qfunc
+ def __call__(self,*args):
+  return self.qlist[0](*self.qlist[1:]+args)
+ def __getitem__(self,ind):
+  return self.qlist[ind]
+ def __setitem__(self,ind):
+  pass
+ def __delitem__(self,ind):
+  pass
+
+/ closures don't exist really in q, however they're useful for implementing
+/ python generators. we model a closure as a projection like this
+/ f:{[state;dummy]...;(.z.s modified state;func result)}[initialstate]
+/ the closure class above in python when called will return the final result
+/ but update the projection it is maintaining internally to use the new state
+/ example generator functions 
+gftil:{[state;d].z.s[u],u:state+1}0 / 0,1,...,N-1 
+gffact:{[state;d](.z.s u;last u:prds 1 0+state)}0 1 / factorial
+
+/ generator lambda, to be partially applied with a closure in python
+/ the subsequent application of this function to an int N will give a 
+/ generator which yields N times
+gl:.P.EVAL"lambda genarg,clsr:[(yield clsr(x)) for x in range(genarg)]"
+.py.imp_pycallable_from[`functools]`partial;
+/ should be in it's own module
+.py.imp_class_from[`$"__main__"]`qclosure;
+/ returns a python generator function from q 'closure' x and argument y where y is the
+/ number of times the generator will be called
+qgenf:{pycallable[partial[gl;`clsr pp qclosure x]]y}
+/ examples
+/.py.imp_callable_from_as[`builtins;`sum;`pysum]
+// sum of first N ints using python generators
+/ pysum .py.qgenf[.py.gftil;10]
+// sum of factorials of first N numbers
+/ pysum .py.qgenf[.py.gffact;10]
+/genq:partial[gl;`
 
 \
 TODO
-do we need module handling so we can do equivalent similar thing to classinstance behaviour?
+do we need module handling so we can do similar thing to classinstance behaviour?
 to give something analogous to
 import numpy as np
 np.array(...)
