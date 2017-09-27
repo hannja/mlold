@@ -93,9 +93,14 @@ atr:.P.ATTR
 / example above 
 locfunc:c callable,imp_from_i`$"__main__" / get callable version of local function 
 / to convert q vectors to python lists (they will be tuples by default)
-pylist:pycallable_from[`builtins;`list]
-/ convert to q, e.g. convert a numpy array to a q array, seems to have issues doing it directly at the moment
+pylist:pycallable_from[`builtins]`list
+/ used to convert NumPy arrays to lists, issues with higher dimensional numpy arrays
+/ currently in python interface, just using pylist doesn't do deep list conversion
+np2list:pycallable_from[imp_from_i[`numpy;`ndarray];`tolist]
+/ convert to q, e.g. convert x to a list (using list(...)) then convert to q 
 qlist:{.P.GET pylist x}
+/numpy array to a q array, seems to have issues doing it directly at the moment
+np2qlist:{.P.GET np2list x}
 
 / classdict from an instance
 / produce a dictionary structure with callable methods and accessors for properties and data members
