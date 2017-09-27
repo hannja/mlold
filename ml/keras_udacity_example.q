@@ -5,7 +5,7 @@
 
 / Load data, split to features and labels and into training and testing sets
 data:0^`admit`gre`gpa`classrank xcol ("BFFF";enlist csv)0:`:student_data.csv
-/ one hot encode ranks class ranks
+/ one hot encode class ranks and admission status
 data:ohecol2tab[data;`classrank]
 data:ohecol2tab[data;`admit]
 / normalize label values TODO, should store original max values to denormalize later
@@ -44,10 +44,8 @@ model.add Dense[2;`activation pp `softmax];
 
 / compile the model
 / metrics param needs to be manually converted to python list as keras insists on list
-/ but q makes python tuple from symlist, .py.pylist does gives a python list as foreign object
-model.compile[`loss pp`categorical_crossentropy;
-              `optimizer pp SGD[`lr pp .01];
-              `metrics pp .py.pylist 1#`accuracy];
+/ but q makes python tuple from symlist, .py.pylist just gives a python list as foreign object
+model.compile[`loss pp`categorical_crossentropy;`optimizer pp SGD`lr pp .01;`metrics pp .py.pylist 1#`accuracy];
 / print a summary
 model.summary[];
 
@@ -57,7 +55,7 @@ model.fit[nparray training.features;nparray training.labels;`epochs pp 10;`batch
 
 / predict the labels for the test set
 / note that we overwrote model.predict above to return a q object because it's convertable to q
-result:model.predict[nparray testing.features]
+result:model.predict nparray testing.features
 
 
 \
