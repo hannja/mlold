@@ -27,7 +27,7 @@ mode:{u?max u:freq x}
 / number of occurrences by class
 freq:{?[([]x);();`x;(count;`i)]}
 
-/ sample one index from top y of list of result propabilities x
+/ sample one index from top y of list of result probabilities x
 sample:{first u randp[1]x y sublist u:idesc x}
 / x random indices for a list of relative probablilites y 
 randp:{sy bin x?last sy:0,sums y}
