@@ -225,16 +225,12 @@ help:{
 / note that you need the modified version of py.c with the change for projections for this to work
 /# callable class wrappers for q projections and 'closures' (see below) 
 P)from itertools import count
-P)import time
 P)class qclosure(object):
  def __init__(self,qfunc=None):
   self.qlist=qfunc
  def __call__(self,*args):
-  timecall = time.time()
   res=self.qlist[0](*self.qlist[1:]+args)
-  #print("closure call time: ",time.time()-timecall)
   self.qlist=res[0] #update the projection
-  #print("closure update time: ",time.time()-timecall)
   return res[-1]
  def __getitem__(self,ind):
   return self.qlist[ind]
@@ -257,12 +253,12 @@ P)class qprojection(object):
 
 / closures don't exist really in q, however they're useful for implementing
 / python generators. we model a closure as a projection like this
-/ f:{[state;dummy]...;(.z.s modified state;func result)}[initialstate]
+/ f:{[state;dummy]...;((.z.s;modified state);func result)}[initialstate]
 / the closure class above in python when called will return the final result
-/ but update the projection it is maintaining internally to use the new state
+/ but update the projection (as a list) it is maintaining internally to use the new state
 / example generator functions 
-gftil:{[state;d].z.s[u],u:state+1}0 / 0,1,...,N-1 
-gffact:{[state;d](.z.s u;last u:prds 1 0+state)}0 1 / factorial
+gftil:{[state;d](.z.s,u;u:state+1)}0 / 0,1,...,N-1 
+gffact:{[state;d]((.z.s;u);last u:prds 1 0+state)}0 1 / factorial
 
 / generator lambda, to be partially applied with a closure in python
 / the subsequent application of this function to an int N will give a 
