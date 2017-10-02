@@ -36,6 +36,7 @@ ftfs.e:ftfs.f
 gftfs:{ftfs$[x in key ftfs;x;`]}
 tformats@:where not null tformats:.Q.t,upper[.Q.t],"qko"
 li:{
+ if[10=type y;:x y];
  fs:@[lfi;y;{-2"log format error \"",y,"\", format string is ",-3!x;0b}first y];
  if[not 0b~fs;x fs]}
 / actual functions 

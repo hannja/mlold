@@ -224,12 +224,17 @@ help:{
 /TODO these should really be in a python module I think, needed to wrap q projections for callbacks and generators
 / note that you need the modified version of py.c with the change for projections for this to work
 /# callable class wrappers for q projections and 'closures' (see below) 
+P)from itertools import count
+P)import time
 P)class qclosure(object):
  def __init__(self,qfunc=None):
   self.qlist=qfunc
  def __call__(self,*args):
+  timecall = time.time()
   res=self.qlist[0](*self.qlist[1:]+args)
+  #print("closure call time: ",time.time()-timecall)
   self.qlist=res[0] #update the projection
+  #print("closure update time: ",time.time()-timecall)
   return res[-1]
  def __getitem__(self,ind):
   return self.qlist[ind]
@@ -263,12 +268,15 @@ gffact:{[state;d](.z.s u;last u:prds 1 0+state)}0 1 / factorial
 / the subsequent application of this function to an int N will give a 
 / generator which yields N times
 gl:.P.EVAL"lambda genarg,clsr:[(yield clsr(x)) for x in range(genarg)]"
+/ this one just keeps yielding
+gli:.P.EVAL"lambda genarg,clsr:[(yield clsr(x)) for x in count()]"
 .py.imp_pycallable_from[`functools]`partial;
 / should be in it's own module
 .py.imp_class_from[`$"__main__"]`qclosure;
 / returns a python generator function from q 'closure' x and argument y where y is the
 / number of times the generator will be called
 qgenf:{pycallable[partial[gl;`clsr pp qclosure x]]y}
+qgenfi:{pycallable[partial[gli;`clsr pp qclosure x]]0}
 / examples
 /.py.imp_callable_from_as[`builtins;`sum;`pysum]
 // sum of first N ints using python generators
