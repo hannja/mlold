@@ -31,16 +31,19 @@ dexists:{11=type key hsym`$sstring x}
 
 if[not fexists data:hsym`$sstring o`data;
  -2"data file does not exist\n",usage;exit 2];
+
 if[not dexists checkpointdir:hsym`$sstring o`checkpoint;
  -1"checkpoint directory does not exist, will create it\n";
  hdel(` sv checkpointdir,`e)set ();
  ];
 checkpoint:` sv checkpointdir,`checkpoint
+
 if[not in[;`train`generate]method:`$o`method];
 restore:`restore in key o;
 if[restore;
  if[not fexists restorefile:$["1b"~o`restore;checkpoint;hsym`$sstring o`restore];
   .lf.err("restore specified but restore point %s does not exist\n",usage;restorefile);exit 3]];
+
 {[o;n;t;d]n set d^t$o n;}[o].'
  (`seqlen,"J",64;`embedsize,"J",32;`length,"J",500;`rnnsize,"J",128;`numlayers,"J",2;`topn,"J",10;
   `numepochs,"J",2;`batchsize,"J",64;`droprate,"F",0.;`learnrate,"J",1e-3;`clipnorm,"F",5.;
