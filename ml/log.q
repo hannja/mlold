@@ -41,4 +41,4 @@ li:{
  if[not 0b~fs;x fs]}
 / actual functions 
 out:{li[-1]x}
-err:{1i[-2]x}
+err:{li[-2]x}
