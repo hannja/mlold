@@ -271,8 +271,8 @@ gli:.P.EVAL"lambda genarg,clsr:[(yield clsr(x)) for x in count()]"
 .py.imp_class_from[`$"__main__"]`qclosure;
 / returns a python generator function from q 'closure' x and argument y where y is the
 / number of times the generator will be called
-qgenf:{pycallable[partial[gl;`clsr pp qclosure x]]y}
-qgenfi:{pycallable[partial[gli;`clsr pp qclosure x]]0}
+qgenf:{pycallable[partial[gl;`clsr pp qclosure$[104=type x;get x;'`shouldbeprojection]]]y}
+qgenfi:{pycallable[partial[gli;`clsr pp qclosure$[104=type x;get x;'`shouldbeprojection]]]0}
 / examples
 /.py.imp_callable_from_as[`builtins;`sum;`pysum]
 // sum of first N ints using python generators
