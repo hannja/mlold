@@ -147,6 +147,7 @@ i.anames:{`${x where not x like"_*"} callable[.P.EVAL"lambda xlist,y: [xi.name f
 
 / some other utilities and helper functions 
 pyhelp:{pycallable_from[`builtins;`help]x;}
+pyhelpstr:{callable_from[`inspect;`getdoc]x}
 pyprint:{x y;}pycallable_from[`builtins;`print]
 setattr:pycallable_from[`builtins;`setattr]; / maybe should be in c?
 / getting and setting properties and data
@@ -187,6 +188,21 @@ help:{
   99=type x; / might be wrapped class
    if[11h=type key x;:.z.s x`$"_pyobj"]; / doesn't matter if not there 
    ];"no help available"}
+helpstr:{
+ $[112=type x;
+   :pyhelpstr x;
+  105=type x; /might be a pycallable 
+   $[last[u:get x]~ce 1#`.py.q2pargs;
+     :.z.s last get last get first u;
+    .P.GET~u 0; / callable or some other composition with .P.GET as final function
+     :.z.s last u; 
+    105=type last u; / might be property setter
+     if[last[u]~ce 1#`.py.pparams;:.z.s x[]]; 
+    ]; 
+  99=type x; / might be wrapped class
+   if[11h=type key x;:.z.s x`$"_pyobj"]; / doesn't matter if not there 
+   ];"no help available"}
+ 
 
 
 /comment if you want your top level namespace left in peace (this puts help and print in top level)
