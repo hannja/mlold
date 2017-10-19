@@ -1,4 +1,4 @@
-\l pyutils.q
+\l p.q
 \l mlutils.q
 / some logging utils
 \l log.q
@@ -53,13 +53,16 @@ if[restore;
 
 
 / work begins
+/ a helper, set a variable after we've imported
+impandset:{y set'.p.pycallable_imp'[x;y];}
 / keras imports
-.py.imp_class_from[`keras.callbacks]`Callback`ModelCheckpoint`TensorBoard`LambdaCallback
-.py.imp_class_from[`keras.layers]`Dense`Dropout`Embedding`LSTM`TimeDistributed
-.py.imp_class_from[`keras.models]`load_model`Sequential
-.py.imp_class_from[`keras.optimizers]`Adam
+impandset[`keras.callbacks]`Callback`ModelCheckpoint`TensorBoard`LambdaCallback
+impandset[`keras.layers]`Dense`Dropout`Embedding`LSTM`TimeDistributed
+impandset[`keras.models]`load_model`Sequential
+impandset[`keras.optimizers]`Adam
+
 / create np arrays from q lists
-nparray:.py.pycallable_from[`numpy;`array]
+nparray:.p.pycallable_imp[`numpy;`array]
 
 / read the data and create encode and decode functions
 / new lines are a valid character 0x0b 0x0c and \r are not`
@@ -76,7 +79,7 @@ dd:(0#`)!()
 vldparams:{[req;p;d]if[not all u:req in key p:d,p;'"missing params: ",csv sv string req where not u];p}
 
 / gives (LSTM layer;Dropout layer) 
-lstmdrop:{[rnnsz;dr]LSTM[rnnsz;`return_sequences pp 1b;`stateful pp 1b],Dropout dr}
+lstmdrop:{[rnnsz;dr]LSTM[rnnsz;`return_sequences pykw 1b;`stateful pykw 1b],Dropout dr}
 
 / build and compile model from param dictionary
 / the add and compile calls here are from python, each add statements adds a python foreign object
@@ -86,11 +89,11 @@ bmodel:{[p]
   defs:select vocsz:count dec,embedsz:32,rnnsz:128,nl:2,dr:0.,lr:.001,cn:5. from dd; 
 
  add:@[;`add]model:cim Sequential[]; / we'll be using methods from model so wrap the object
- add each Embedding[p`vocsz;p`embedsz;`batch_input_shape pp p`batchsize`seqlen],Dropout p`dr;
+ add each Embedding[p`vocsz;p`embedsz;`batch_input_shape pykw p`batchsize`seqlen],Dropout p`dr;
  / add LSTM layers
  add each raze lstmdrop[p`rnnsz]each p[`nl]#p`dr;
- add TimeDistributed Dense[p`vocsz;`activation pp `softmax];
- model[`compile][`loss pp `categorical_crossentropy;`optimizer pp Adam[p`lr;`clipnorm pp p`cn]];
+ add TimeDistributed Dense[p`vocsz;`activation pykw `softmax];
+ model[`compile][`loss pykw `categorical_crossentropy;`optimizer pykw Adam[p`lr;`clipnorm pykw p`cn]];
  model}
 
 / build an inference model
@@ -107,9 +110,9 @@ bimodel:{[model;batchsize;seqlen]
 / we'll want to access methods and properties of models and 
 / the predict and get_config methods to return q objects so
 / we override the default behaviour which is to return a foreign object
-cim:{x:.py.classinstance x;
- x[`predict]:.py.c .py.np2qlist,x`predict;
- x[`get_config]:.py.c .P.GET,x`get_config;
+cim:{x:.p.obj2dict x;
+ x[`predict]:.p.c .p.py2q,x`predict;
+ x[`get_config]:.p.c .p.py2q,x`get_config;
  x}
 
 / generate some text using an inference model and an input seed
@@ -184,11 +187,11 @@ train:{[]
  model.summary[];
  / build call backs for training
  / checkpointing
- ccb:ModelCheckpoint[1_string checkpoint;`verbose pp 0;`save_best_only pp 0b];
+ ccb:ModelCheckpoint[1_string checkpoint;`verbose pykw 0;`save_best_only pykw 0b];
  / logging callbacks 
- lcb:LambdaCallback[`on_epoch_end pp epochend];
+ lcb:LambdaCallback[`on_epoch_end pykw epochend];
  / write tensorboard output
- tbcb:TensorBoard["./log";`write_graph pp 1b;`write_images pp 1b;`write_grads pp 1b];
+ /tbcb:TensorBoard["./log";`write_graph pykw 1b;`write_images pykw 1b;`write_grads pykw 1b];
 
  nb:(-1+count data)div batchsize*seqlen;
  / build a generator function for keras
@@ -196,7 +199,9 @@ train:{[]
  / inference model
  imodel::bimodel[model;1;1]; 
  / training
- model.fit_generator[.py.qgenfi bg;nb;numepochs;`callbacks pp .py.pylist(ccb;lcb;tbcb)];
+ /model.fit_generator[.p.qgenfi bg;nb;numepochs;`callbacks pykw .p.pylist(ccb;lcb;tbcb)];
+ / if using non tensorflow backend
+ model.fit_generator[.p.qgenfi bg;nb;numepochs;`callbacks pykw .p.pylist(ccb;lcb)];
  / once trained, generate some text 
  inferandgenerate[imodel;model;batchsize;seqlen];
  }
